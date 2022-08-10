@@ -15,6 +15,11 @@ find_package(CSparse REQUIRED)
 find_package(G2O REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Glog REQUIRED)
+find_package(realsense2 REQUIRED)
+#find_package(GLFW REQUIRED)
+
+#add_definitions(-DWITH_REALSENSE)
+#set(EXTRA_LIBS ${EXTRA_LIBS} )
 
 include_directories(
         ${OpenCV_INCLUDE_DIRS}
@@ -24,11 +29,28 @@ include_directories(
 #        "/usr/include/eigen3/"
         ${Pangolin_INCLUDE_DIRS}
         ${CSPARSE_INCLUDE_DIR}
+#        ${REALSENSE_INCLUDE_DIR}
+        ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+        ${GLOG_INCLUDE_DIRS}
+#        ${GLFW_INCLUDE_DIRS}
 )
 
 # enable drawing plot
 add_subdirectory(third_party/matplotlib-cpp)
 
 add_executable(test test.cpp cuda_test.cuh)
-target_include_directories(test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${GLOG_INCLUDE_DIRS})
-target_link_libraries(test matplotlib_cpp ${OpenCV_LIBS} ${Pangolin_LIBRARIES} ${GLOG_LIBRARIES} g2o_core g2o_stuff g2o_types_sba g2o_solver_csparse g2o_csparse_extension Sophus::Sophus)
+#target_include_directories(test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${GLOG_INCLUDE_DIRS})
+target_link_libraries(test
+        matplotlib_cpp
+        ${realsense2_LIBRARY}
+        ${OpenCV_LIBS}
+        ${Pangolin_LIBRARIES}
+        ${GLOG_LIBRARIES}
+#        ${GLFW_LIBRARIES}
+        g2o_core
+        g2o_stuff
+        g2o_types_sba
+        g2o_solver_csparse
+        g2o_csparse_extension
+        Sophus::Sophus
+        )
