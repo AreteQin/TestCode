@@ -36,12 +36,12 @@ include_directories(
 )
 
 # enable drawing plot
-add_subdirectory(third_party/matplotlib-cpp)
+#add_subdirectory(third_party/matplotlib-cpp)
 
 add_executable(test test.cpp cuda_test.cuh)
 #target_include_directories(test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${GLOG_INCLUDE_DIRS})
 target_link_libraries(test
-        matplotlib_cpp
+#        matplotlib_cpp
         ${realsense2_LIBRARY}
         ${OpenCV_LIBS}
         ${Pangolin_LIBRARIES}
