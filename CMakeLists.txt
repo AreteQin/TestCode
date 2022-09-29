@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
-project(Test)
-#project(Test LANGUAGES CXX CUDA)
+#project(Test)
+project(Test LANGUAGES CXX CUDA)
 
 set(CMAKE_BUILD_TYPE "Release")
 #add_definitions("-DENABLE_SSE")
@@ -39,9 +39,9 @@ include_directories(
 # enable drawing plot
 #add_subdirectory(third_party/matplotlib-cpp)
 
-add_executable(test test.cpp)#cuda_test.cuh)
+add_executable(testing_codes test.cpp cuda_test.cuh) # "name "test" is not valid in TX2
 #target_include_directories(test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${GLOG_INCLUDE_DIRS})
-target_link_libraries(test
+target_link_libraries(testing_codes
 #        matplotlib_cpp
         ${realsense2_LIBRARY}
         ${OpenCV_LIBS}
