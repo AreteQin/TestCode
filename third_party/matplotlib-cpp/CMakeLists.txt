@@ -17,6 +17,7 @@ target_compile_features(matplotlib_cpp INTERFACE
   cxx_std_11
 )
 # TODO: Use `Development.Embed` component when requiring cmake >= 3.18
+set(Python3_EXECUTABLE "/usr/bin/python3")
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 target_link_libraries(matplotlib_cpp INTERFACE
   Python3::Python
