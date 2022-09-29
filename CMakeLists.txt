@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.0)
 project(Test LANGUAGES CXX CUDA)
 
 set(CMAKE_BUILD_TYPE "Release")
-add_definitions("-DENABLE_SSE")
+#add_definitions("-DENABLE_SSE")
 #set(CMAKE_CXX_FLAGS "-std=c++17 ${SSE_FLAGS} -g -O3 -march=native")
-set(CMAKE_CXX_FLAGS "-std=c++17 -O3 -fopenmp")
+#set(CMAKE_CXX_FLAGS "-std=c++17 -O3 -fopenmp")
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules) # Add elements to list
 #set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 
