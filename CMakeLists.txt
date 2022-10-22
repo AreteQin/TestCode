@@ -18,9 +18,7 @@ find_package(Eigen3 REQUIRED)
 find_package(Glog REQUIRED)
 find_package(realsense2 REQUIRED)
 #find_package(GLFW REQUIRED)
-
-#add_definitions(-DWITH_REALSENSE)
-#set(EXTRA_LIBS ${EXTRA_LIBS} )
+#find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 
 include_directories(
         ${OpenCV_INCLUDE_DIRS}
@@ -34,6 +32,7 @@ include_directories(
         ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
         ${GLOG_INCLUDE_DIRS}
 #        ${GLFW_INCLUDE_DIRS}
+#        ${Boost_INCLUDE_DIR}
 )
 
 # enable drawing plot
@@ -54,4 +53,5 @@ target_link_libraries(testing_codes
         g2o_solver_csparse
         g2o_csparse_extension
         Sophus::Sophus
+        -lboost_serialization
         )
