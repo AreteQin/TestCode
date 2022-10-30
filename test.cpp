@@ -639,10 +639,13 @@ int main() {
     Eigen::Vector3f dirG;
     dirG.setZero();
 
-    // main loop
+
+    // Counter
     int have_imu_num = 0;
     float t = 0;
     end_time = clock();
+
+    // Main loop
     while (t < 3) { // 3s
         // Generate noise
         noise << n(e), n(e), n(e), n(e), n(e), n(e);
