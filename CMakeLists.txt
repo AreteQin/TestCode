@@ -46,14 +46,15 @@ include_directories(
 )
 
 # enable drawing plot
-#add_subdirectory(third_party/matplotlib-cpp)
+add_subdirectory(third_party/matplotlib-cpp)
+include_directories(${PROJECT_SOURCE_DIR}/third_party/matplotlib-cpp)
 
 add_library(my_lib lib.cpp lib.h)
 add_executable(testing_codes test.cpp cuda_test.cuh) # "name "test" is not valid in TX2
 #target_include_directories(test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${GLOG_INCLUDE_DIRS})
 target_link_libraries(testing_codes
         my_lib
-#        matplotlib_cpp
+        matplotlib_cpp
         ${realsense2_LIBRARY}
         ${OpenCV_LIBS}
         ${Pangolin_LIBRARIES}
