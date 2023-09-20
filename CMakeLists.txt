@@ -1,11 +1,12 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.8)
 #project(Test)
 project(Test LANGUAGES CXX CUDA)
 
 set(CMAKE_BUILD_TYPE "debug")
 #add_definitions("-DENABLE_SSE")
 #set(CMAKE_CXX_FLAGS "-std=c++17 ${SSE_FLAGS} -g -O3 -march=native")
-#set(CMAKE_CXX_FLAGS "-std=c++17 -O3 -fopenmp")
+#set(CMAKE_CXX_FLAGS "-std=c++17 -O3 -fopenmp") # -fopenmp enable multi-thread
+set(CMAKE_CXX_FLAGS "-std=c++17")
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules) # Add elements to list
 #set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 
@@ -13,7 +14,12 @@ find_package(OpenCV 4 REQUIRED)
 find_package(Sophus REQUIRED)
 #find_package(Pangolin REQUIRED) # used to show pointcloud
 find_package(CSparse REQUIRED)
+
 find_package(G2O REQUIRED)
+if(G2O_FOUND)
+    message(STATUS "G2O found. Version: ${G2O_VERSION}")
+endif (G2O_FOUND)
+
 find_package(Eigen3 REQUIRED)
 find_package(Glog REQUIRED)
 find_package(realsense2 REQUIRED)
@@ -21,6 +27,35 @@ find_package(realsense2 REQUIRED)
 #find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(Ceres REQUIRED)
+
+find_package(CUDA REQUIRED)
+if (CUDA_FOUND)
+    message("-- Found CUDA version ${CUDA_VERSION} installed in: "
+            "${CUDA_TOOLKIT_ROOT_DIR} via legacy (< 3.17) CMake module. "
+            "Using the legacy CMake module means that any installation of "
+            "Ceres will require that the CUDA libraries be installed in a "
+            "location included in the LD_LIBRARY_PATH.")
+    enable_language(CUDA)
+
+    macro(DECLARE_IMPORTED_CUDA_TARGET COMPONENT)
+        add_library(CUDA::${COMPONENT} INTERFACE IMPORTED)
+        target_include_directories(
+                CUDA::${COMPONENT} INTERFACE ${CUDA_INCLUDE_DIRS})
+        target_link_libraries(
+                CUDA::${COMPONENT} INTERFACE ${CUDA_${COMPONENT}_LIBRARY} ${ARGN})
+    endmacro()
+
+    declare_imported_cuda_target(cublas)
+    declare_imported_cuda_target(cusolver)
+    declare_imported_cuda_target(cusparse)
+    declare_imported_cuda_target(cudart ${CUDA_LIBRARIES})
+
+    set(CUDAToolkit_BIN_DIR ${CUDA_TOOLKIT_ROOT_DIR}/bin)
+else (CUDA_FOUND)
+    message("-- Did not find CUDA, disabling CUDA support.")
+    update_cache_variable(USE_CUDA OFF)
+endif (CUDA_FOUND)
+set(CUDA_ADD_CUBLAS_TO_TARGET ON)
 
 if (OPENMP_FOUND)
     message(STATUS "OpenMP found will try to link!")
