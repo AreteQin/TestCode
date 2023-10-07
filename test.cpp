@@ -1,5 +1,4 @@
 #include "iostream"
-#include "math.h"
 #include <opencv2/viz/widgets.hpp>
 #include <string>
 #include <glog/logging.h>
@@ -50,31 +49,6 @@ private:
 };
 
 int main (){
-    // VINS extrinsics for M300
-//    double R21 = -0.923949;
-//    double R11 = -0.148326;
-//    double R31 = -0.352589;
-//    double R32 = -0.9308;
-//    double R33 = 0.096396;
-// Kalibr extrinsics for QCar
-
-// VINS extrinsics for QCar
-//    0.0157658 0.0376125  0.999168
-//                         -0.993578  0.112572   0.01144
-//                                               -0.112049 -0.992931 0.0391457
-// 0.000133774 -0.00115319  -0.0997888
-//    double R21 = -0.01499097;
-//    double R11 = -0.01730286;
-//    double R31 = 0.99973791;
-//    double R32 = -0.01730136;
-//    double R33 = -0.01499269;
-//    double roll = atan2(R32, R33);
-//    double pitch = atan2(-R31, sqrt(R32 * R32 + R33 * R33));
-//    double yaw = atan2(R21, R11);
-//    cout << "roll: " << roll << endl;
-//    cout << "pitch: " << pitch << endl;
-//    cout << "yaw: " << yaw << endl;
-
 
     // Initialize Google's logging library.
     google::InitGoogleLogging("test");
