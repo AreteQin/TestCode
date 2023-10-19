@@ -74,7 +74,6 @@ include_directories(
         ${CSPARSE_INCLUDE_DIR}
 #        ${REALSENSE_INCLUDE_DIR}
         ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
-#        ${GLOG_INCLUDE_DIRS}
 #        ${GLFW_INCLUDE_DIRS}
 #        ${Boost_INCLUDE_DIR}
         ${CERES_INCLUDE_DIRS}
