@@ -22,7 +22,7 @@ endif (G2O_FOUND)
 
 find_package(Eigen3 REQUIRED)
 find_package(Glog REQUIRED)
-find_package(realsense2 REQUIRED)
+#find_package(realsense2 REQUIRED)
 #find_package(GLFW REQUIRED)
 #find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 find_package(OpenMP REQUIRED)
@@ -73,7 +73,7 @@ include_directories(
         ${Pangolin_INCLUDE_DIRS}
         ${CSPARSE_INCLUDE_DIR}
 #        ${REALSENSE_INCLUDE_DIR}
-        ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+#        ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
 #        ${GLFW_INCLUDE_DIRS}
 #        ${Boost_INCLUDE_DIR}
         ${CERES_INCLUDE_DIRS}
@@ -84,7 +84,7 @@ add_subdirectory(third_party/matplotlib-cpp)
 include_directories(${PROJECT_SOURCE_DIR}/third_party/matplotlib-cpp)
 
 add_library(my_lib lib.cpp lib.h)
-add_executable(testing_codes test.cpp cuda_test.cuh) # "name "test" is not valid in TX2
+add_executable(testing_codes test.cpp) # "name "test" is not valid in TX2
 #target_include_directories(test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${GLOG_INCLUDE_DIRS})
 target_link_libraries(testing_codes
         my_lib
@@ -103,3 +103,6 @@ target_link_libraries(testing_codes
         -lboost_serialization
         ${CERES_LIBRARIES}
         )
+
+add_executable(cuda_test cuda_test.cu cuda_test.cuh)
+target_include_directories(cuda_test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${GLOG_INCLUDE_DIRS})
