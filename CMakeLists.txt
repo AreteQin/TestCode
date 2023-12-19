@@ -80,8 +80,8 @@ include_directories(
 )
 
 # enable drawing plot
-add_subdirectory(third_party/matplotlib-cpp)
-include_directories(${PROJECT_SOURCE_DIR}/third_party/matplotlib-cpp)
+#add_subdirectory(third_party/matplotlib-cpp)
+#include_directories(${PROJECT_SOURCE_DIR}/third_party/matplotlib-cpp)
 
 add_library(my_lib lib.cpp lib.h)
 add_executable(testing_codes test.cpp) # "name "test" is not valid in TX2
