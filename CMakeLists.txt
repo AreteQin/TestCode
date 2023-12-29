@@ -22,11 +22,15 @@ endif (G2O_FOUND)
 
 find_package(Eigen3 REQUIRED)
 find_package(Glog REQUIRED)
-#find_package(realsense2 REQUIRED)
+find_package(realsense2 REQUIRED)
 #find_package(GLFW REQUIRED)
 #find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 find_package(OpenMP REQUIRED)
 #find_package(Ceres REQUIRED)
+
+find_package(PCL REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
 find_package(CUDA REQUIRED)
 #if (CUDA_FOUND)
@@ -72,7 +76,7 @@ include_directories(
 #        "/usr/include/eigen3/"
         ${Pangolin_INCLUDE_DIRS}
         ${CSPARSE_INCLUDE_DIR}
-#        ${REALSENSE_INCLUDE_DIR}
+        ${REALSENSE_INCLUDE_DIR}
 #        ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
 #        ${GLFW_INCLUDE_DIRS}
 #        ${Boost_INCLUDE_DIR}
@@ -93,6 +97,7 @@ target_link_libraries(testing_codes
         ${OpenCV_LIBS}
         ${Pangolin_LIBRARIES}
         ${GLOG_LIBRARIES}
+        ${PCL_LIBRARIES}
 #        ${GLFW_LIBRARIES}
         g2o_core
         g2o_stuff
