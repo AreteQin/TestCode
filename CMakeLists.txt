@@ -16,7 +16,7 @@ find_package(Sophus REQUIRED)
 find_package(CSparse REQUIRED)
 
 find_package(G2O REQUIRED)
-if(G2O_FOUND)
+if (G2O_FOUND)
     message(STATUS "G2O found. Version: ${G2O_VERSION}")
 endif (G2O_FOUND)
 
@@ -61,6 +61,22 @@ find_package(CUDA REQUIRED)
 #endif (CUDA_FOUND)
 set(CUDA_ADD_CUBLAS_TO_TARGET ON)
 
+# ROS support
+find_package(catkin REQUIRED COMPONENTS
+        roscpp
+        std_msgs
+        image_transport
+        tf2
+        tf2_ros
+        tf
+        cv_bridge
+        message_filters
+        sensor_msgs
+)
+include_directories(
+        ${catkin_INCLUDE_DIRS}
+)
+
 if (OPENMP_FOUND)
     message(STATUS "OpenMP found will try to link!")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -73,14 +89,14 @@ include_directories(
         ${G2O_INCLUDE_DIRS}
         ${Sophus_INCLUDE_DIRS}
         ${EIGEN3_INCLUDE_DIR}
-#        "/usr/include/eigen3/"
+        #        "/usr/include/eigen3/"
         ${Pangolin_INCLUDE_DIRS}
         ${CSPARSE_INCLUDE_DIR}
         ${REALSENSE_INCLUDE_DIR}
-#        ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
-#        ${GLFW_INCLUDE_DIRS}
-#        ${Boost_INCLUDE_DIR}
-#        ${CERES_INCLUDE_DIRS}
+        #        ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+        #        ${GLFW_INCLUDE_DIRS}
+        #        ${Boost_INCLUDE_DIR}
+        #        ${CERES_INCLUDE_DIRS}
 )
 
 # enable drawing plot
@@ -92,13 +108,13 @@ add_executable(testing_codes test.cpp) # "name "test" is not valid in TX2
 #target_include_directories(test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${GLOG_INCLUDE_DIRS})
 target_link_libraries(testing_codes
         my_lib
-#        matplotlib_cpp
+        #        matplotlib_cpp
         ${realsense2_LIBRARY}
         ${OpenCV_LIBS}
         ${Pangolin_LIBRARIES}
         ${GLOG_LIBRARIES}
         ${PCL_LIBRARIES}
-#        ${GLFW_LIBRARIES}
+        #        ${GLFW_LIBRARIES}
         g2o_core
         g2o_stuff
         g2o_types_sba
@@ -107,7 +123,23 @@ target_link_libraries(testing_codes
         Sophus::Sophus
         -lboost_serialization
         ${CERES_LIBRARIES}
-        )
+)
 
 add_executable(cuda_test cuda_test.cu cuda_test.cuh)
-target_include_directories(cuda_test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${GLOG_INCLUDE_DIRS})
+target_include_directories(cuda_test PUBLIC
+        ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+        ${GLOG_INCLUDE_DIRS}
+)
+
+add_executable(ros_test_node src/ros_test_node.cpp)
+target_include_directories(ros_test_node PRIVATE
+#        ${realsense2_INCLUDE_DIR}
+        ${OpenCV_INCLUDE_DIRS}
+)
+target_link_libraries(ros_test_node
+#        ${realsense2_LIBRARY}
+        ${OpenCV_LIBS}
+        ${GLOG_LIBRARIES}
+        ${PCL_LIBRARIES}
+        ${catkin_LIBRARIES}
+)
