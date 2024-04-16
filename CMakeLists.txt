@@ -72,6 +72,7 @@ find_package(catkin REQUIRED COMPONENTS
         cv_bridge
         message_filters
         sensor_msgs
+        rosbag
 )
 include_directories(
         ${catkin_INCLUDE_DIRS}
