@@ -2,35 +2,35 @@ cmake_minimum_required(VERSION 3.8)
 #project(Test)
 project(Test LANGUAGES CXX CUDA)
 
-set(CMAKE_BUILD_TYPE "debug")
+#set(CMAKE_BUILD_TYPE "debug")
 #add_definitions("-DENABLE_SSE")
 #set(CMAKE_CXX_FLAGS "-std=c++17 ${SSE_FLAGS} -g -O3 -march=native")
 #set(CMAKE_CXX_FLAGS "-std=c++17 -O3 -fopenmp") # -fopenmp enable multi-thread
-set(CMAKE_CXX_FLAGS "-std=c++17")
+#set(CMAKE_CXX_FLAGS "-std=c++17")
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules) # Add elements to list
 #set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 
 find_package(OpenCV 4 REQUIRED)
 find_package(Sophus REQUIRED)
 #find_package(Pangolin REQUIRED) # used to show pointcloud
-find_package(CSparse REQUIRED)
+#find_package(CSparse REQUIRED)
 
-find_package(G2O REQUIRED)
-if (G2O_FOUND)
-    message(STATUS "G2O found. Version: ${G2O_VERSION}")
-endif (G2O_FOUND)
+#find_package(G2O REQUIRED)
+#if (G2O_FOUND)
+#    message(STATUS "G2O found. Version: ${G2O_VERSION}")
+#endif (G2O_FOUND)
 
 find_package(Eigen3 REQUIRED)
 find_package(Glog REQUIRED)
-find_package(realsense2 REQUIRED)
+#find_package(realsense2 REQUIRED)
 #find_package(GLFW REQUIRED)
 #find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
-find_package(OpenMP REQUIRED)
+#find_package(OpenMP REQUIRED)
 #find_package(Ceres REQUIRED)
 
-find_package(PCL REQUIRED)
-include_directories(${PCL_INCLUDE_DIRS})
-add_definitions(${PCL_DEFINITIONS})
+#find_package(PCL REQUIRED)
+#include_directories(${PCL_INCLUDE_DIRS})
+#add_definitions(${PCL_DEFINITIONS})
 
 find_package(CUDA REQUIRED)
 #if (CUDA_FOUND)
@@ -90,7 +90,6 @@ include_directories(
         ${G2O_INCLUDE_DIRS}
         ${Sophus_INCLUDE_DIRS}
         ${EIGEN3_INCLUDE_DIR}
-        #        "/usr/include/eigen3/"
         ${Pangolin_INCLUDE_DIRS}
         ${CSPARSE_INCLUDE_DIR}
         ${REALSENSE_INCLUDE_DIR}
@@ -101,13 +100,17 @@ include_directories(
 )
 
 # enable drawing plot
-#add_subdirectory(third_party/matplotlib-cpp)
-#include_directories(${PROJECT_SOURCE_DIR}/third_party/matplotlib-cpp)
+add_subdirectory(third_party/matplotlib-cpp)
+include_directories(${PROJECT_SOURCE_DIR}/third_party/matplotlib-cpp)
+# Find Python headers
+find_package(PythonLibs REQUIRED)
+include_directories(${PYTHON_INCLUDE_DIRS})
 
 add_library(my_lib lib.cpp lib.h)
 add_executable(testing_codes test.cpp) # "name "test" is not valid in TX2
 #target_include_directories(test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${GLOG_INCLUDE_DIRS})
 target_link_libraries(testing_codes
+        Eigen3::Eigen
         my_lib
         #        matplotlib_cpp
         ${realsense2_LIBRARY}

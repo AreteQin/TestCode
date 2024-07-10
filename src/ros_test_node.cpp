@@ -1,63 +1,52 @@
+#include <matplotlibcpp.h>
+
+namespace plt = matplotlibcpp;
+
+//
+// Created by qin on 05/12/23.
+// This is an example of subscribing to GPS data.
+//
+
+#include <iostream>
 #include <ros/ros.h>
-#include <rosbag/bag.h>
-#include <rosbag/view.h>
-#include <sensor_msgs/Image.h>
-#include <cv_bridge/cv_bridge.h>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <message_filters/time_synchronizer.h>
+#include <glog/logging.h>
+#include <geometry_msgs/PoseArray.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <sensor_msgs/NavSatFix.h>
+#include <vector>
+#include <sensor_msgs/ChannelFloat32.h>
 
-void extractImagesFromBag(const std::string& bag_file, const std::string& output_dir, const std::string& image_topic)
-{
-    rosbag::Bag bag;
-    try
-    {
-        bag.open(bag_file, rosbag::bagmode::Read);
-        rosbag::View view(bag, rosbag::TopicQuery(image_topic));
-
-        cv_bridge::CvImagePtr cv_ptr;
-        int frame_number = 0;
-
-        for (const rosbag::MessageInstance& msg : view)
-        {
-            sensor_msgs::Image::ConstPtr image_msg = msg.instantiate<sensor_msgs::Image>();
-            if (image_msg)
-            {
-                try
-                {
-                    cv_ptr = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::BGR8);
-                    std::string image_filename = output_dir + "/frame" + std::to_string(frame_number) + ".jpg";
-                    cv::imwrite(image_filename, cv_ptr->image);
-                    frame_number++;
-                }
-                catch (cv_bridge::Exception& e)
-                {
-                    ROS_ERROR("Error converting image: %s", e.what());
-                }
-            }
-        }
+void FireCallback(const geometry_msgs::PoseArrayConstPtr &fire_spots_GPS) {
+    // print number of fire spots
+    LOG(INFO) << "The number of fire spots: " << fire_spots_GPS->poses.size() << ".";
+    // print the average GPS positions of fire spots
+    double latitude = 0;
+    double longitude = 0;
+    double altitude = 0;
+    for (const geometry_msgs::Pose &fire_spot: fire_spots_GPS->poses) {
+        latitude += fire_spot.position.x;
+        longitude += fire_spot.position.y;
+        altitude += fire_spot.position.z;
     }
-    catch (rosbag::BagException& e)
-    {
-        ROS_ERROR("Error opening bag file: %s", e.what());
-    }
-    bag.close();
+    latitude /= fire_spots_GPS->poses.size();
+    longitude /= fire_spots_GPS->poses.size();
+    altitude /= fire_spots_GPS->poses.size();
+    LOG(INFO) << "The average GPS positions of fire spots: " << latitude << ", " << longitude << ", " << altitude
+              << ".";
 }
 
-int main(int argc, char** argv)
-{
-    ros::init(argc, argv, "rosbag_image_extractor");
-    if (argc != 4)
-    {
-        ROS_ERROR("Usage: %s <bag_file> <output_directory> <image_topic>", argv[0]);
-        return 1;
-    }
+int main(int argc, char **argv) {
+    // subscribe to the fire spots and the camera pose using message_filters
+    ros::init(argc, argv, "fire_subscriber");
+    ros::NodeHandle nh;
 
-    std::string bag_file = argv[1];
-    std::string output_dir = argv[2];
-    std::string image_topic = argv[3];
+    // subscribe to the camera GPS
+    // ros::Subscriber m300_GPS_sub = nh.subscribe("/dji_osdk_ros/gps_position", 1, CamCallback);
+    // subscribe to the fire GPS
+    ros::Subscriber fire_spots_GPS_sub = nh.subscribe("/position/fire_spots_GPS", 1, FireCallback);
 
-    extractImagesFromBag(bag_file, output_dir, image_topic);
+    ros::spin();
 
-    ROS_INFO("Images extracted successfully!");
     return 0;
 }

@@ -5,7 +5,6 @@ include(GNUInstallDirs)
 set(PACKAGE_NAME matplotlib_cpp)
 set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/${PACKAGE_NAME}/cmake)
 
-
 # Library target
 add_library(matplotlib_cpp INTERFACE)
 target_include_directories(matplotlib_cpp
@@ -13,9 +12,9 @@ target_include_directories(matplotlib_cpp
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/examples>
     $<INSTALL_INTERFACE:include>
 )
-target_compile_features(matplotlib_cpp INTERFACE
-  cxx_std_11
-)
+#target_compile_features(matplotlib_cpp INTERFACE
+#  cxx_std_11
+#)
 # TODO: Use `Development.Embed` component when requiring cmake >= 3.18
 set(Python3_EXECUTABLE /usr/bin/python3)
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
