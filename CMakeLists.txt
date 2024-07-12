@@ -112,7 +112,7 @@ add_executable(testing_codes test.cpp) # "name "test" is not valid in TX2
 target_link_libraries(testing_codes
         Eigen3::Eigen
         my_lib
-        #        matplotlib_cpp
+        matplotlib_cpp
         ${realsense2_LIBRARY}
         ${OpenCV_LIBS}
         ${Pangolin_LIBRARIES}
@@ -137,11 +137,11 @@ target_include_directories(cuda_test PUBLIC
 
 add_executable(ros_test_node src/ros_test_node.cpp)
 target_include_directories(ros_test_node PRIVATE
-#        ${realsense2_INCLUDE_DIR}
+        #        ${realsense2_INCLUDE_DIR}
         ${OpenCV_INCLUDE_DIRS}
 )
 target_link_libraries(ros_test_node
-#        ${realsense2_LIBRARY}
+        #        ${realsense2_LIBRARY}
         ${OpenCV_LIBS}
         ${GLOG_LIBRARIES}
         ${PCL_LIBRARIES}
