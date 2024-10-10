@@ -12,7 +12,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules) # Add element
 
 find_package(OpenCV 4 REQUIRED)
 find_package(Sophus REQUIRED)
-#find_package(Pangolin REQUIRED) # used to show pointcloud
+find_package(Pangolin REQUIRED) # used to show pointcloud
 #find_package(CSparse REQUIRED)
 
 #find_package(G2O REQUIRED)
@@ -31,6 +31,9 @@ find_package(Glog REQUIRED)
 #find_package(PCL REQUIRED)
 #include_directories(${PCL_INCLUDE_DIRS})
 #add_definitions(${PCL_DEFINITIONS})
+
+find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets)
+set(CMAKE_AUTOMOC ON)
 
 find_package(CUDA REQUIRED)
 #if (CUDA_FOUND)
@@ -127,6 +130,9 @@ target_link_libraries(testing_codes
         Sophus::Sophus
         -lboost_serialization
         ${CERES_LIBRARIES}
+        Qt5::Widgets
+        Qt5::Core
+        Qt5::Gui
 )
 
 add_executable(cuda_test cuda_test.cu cuda_test.cuh)
