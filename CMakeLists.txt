@@ -7,12 +7,13 @@ project(Test LANGUAGES CXX CUDA)
 #set(CMAKE_CXX_FLAGS "-std=c++17 ${SSE_FLAGS} -g -O3 -march=native")
 #set(CMAKE_CXX_FLAGS "-std=c++17 -O3 -fopenmp") # -fopenmp enable multi-thread
 #set(CMAKE_CXX_FLAGS "-std=c++17")
+
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules) # Add elements to list
 #set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 
 find_package(OpenCV 4 REQUIRED)
-find_package(Sophus REQUIRED)
-find_package(Pangolin REQUIRED) # used to show pointcloud
+#find_package(Sophus REQUIRED)
+#find_package(Pangolin REQUIRED) # used to show pointcloud
 #find_package(CSparse REQUIRED)
 
 #find_package(G2O REQUIRED)
@@ -122,14 +123,14 @@ target_link_libraries(testing_codes
         ${GLOG_LIBRARIES}
         ${PCL_LIBRARIES}
         #        ${GLFW_LIBRARIES}
-        g2o_core
-        g2o_stuff
-        g2o_types_sba
-        g2o_solver_csparse
-        g2o_csparse_extension
-        Sophus::Sophus
-        -lboost_serialization
-        ${CERES_LIBRARIES}
+#        g2o_core
+#        g2o_stuff
+#        g2o_types_sba
+#        g2o_solver_csparse
+#        g2o_csparse_extension
+#        Sophus::Sophus
+#        -lboost_serialization
+#        ${CERES_LIBRARIES}
         Qt5::Widgets
         Qt5::Core
         Qt5::Gui
