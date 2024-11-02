@@ -104,8 +104,7 @@ include_directories(
 )
 
 # enable drawing plot
-add_subdirectory(third_party/matplotlib-cpp)
-include_directories(${PROJECT_SOURCE_DIR}/third_party/matplotlib-cpp)
+add_subdirectory(third_party/matplotplusplus)
 # Find Python headers
 find_package(PythonLibs REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
@@ -116,7 +115,7 @@ add_executable(testing_codes test.cpp) # "name "test" is not valid in TX2
 target_link_libraries(testing_codes
         Eigen3::Eigen
         my_lib
-        matplotlib_cpp
+        matplot
         ${realsense2_LIBRARY}
         ${OpenCV_LIBS}
         ${Pangolin_LIBRARIES}
