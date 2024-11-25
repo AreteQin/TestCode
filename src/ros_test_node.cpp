@@ -1,62 +1,92 @@
-#include <rosbag/bag.h>
-#include <rosbag/view.h>
-#include <sensor_msgs/Image.h>
-#include <cv_bridge/cv_bridge.h>
-#include <opencv2/opencv.hpp>
-#include <boost/filesystem.hpp>
+#include <ros/ros.h>
+#include <boost/thread.hpp>
+#include <vector>
+#include <cmath>
+#include "matplotlibcpp.h"
 
-int main(int argc, char** argv) {
-    // Check if the correct number of arguments is provided
-    if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " <input_bag> <image_topic> <output_folder>" << std::endl;
-        return -1;
-    }
+namespace plt = matplotlibcpp;
 
-    std::string bag_file = argv[1];
-    std::string image_topic = argv[2];
-    std::string output_folder = argv[3];
+// Shared data structure and mutex
+std::vector<double> shared_data_x;
+std::vector<double> shared_data_y;
+boost::mutex data_mutex;
 
-    // Create the output directory if it doesn't exist
-    boost::filesystem::path dir(output_folder);
-    if (!boost::filesystem::exists(dir)) {
-        boost::filesystem::create_directories(dir);
-    }
+// Function to handle ROS node
+void rosNodeFunction() {
+    // Initialize the ROS node
+    int argc = 0;
+    char **argv = nullptr;
+    ros::init(argc, argv, "ros_matplotlibcpp_node");
+    ros::NodeHandle nh;
 
-    rosbag::Bag bag;
-    try {
-        bag.open(bag_file, rosbag::bagmode::Read);
-    } catch (rosbag::BagException& e) {
-        std::cerr << "Error opening bag file: " << e.what() << std::endl;
-        return -1;
-    }
+    // Example ROS loop
+    ros::Rate loop_rate(10); // 10 Hz
+    double t = 0.0;
+    while (ros::ok()) {
+        // Generate some data
+        double x = t;
+        double y = std::sin(t);
 
-    rosbag::View view(bag, rosbag::TopicQuery(image_topic));
-    cv_bridge::CvImagePtr cv_ptr;
-    int image_count = 0;
+        // Lock the mutex and update shared data
+        {
+            boost::mutex::scoped_lock lock(data_mutex);
+            shared_data_x.push_back(x);
+            shared_data_y.push_back(y);
 
-    // Iterate through each message in the topic
-    for (const rosbag::MessageInstance& msg : view) {
-        sensor_msgs::ImageConstPtr img_msg = msg.instantiate<sensor_msgs::Image>();
-        if (img_msg != nullptr) {
-            try {
-                // Convert the ROS image to OpenCV format
-                cv_ptr = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::BGR8);
-
-                // Construct the filename and save the image
-                std::stringstream ss;
-                ss << output_folder << "/image_" << std::setw(5) << std::setfill('0') << image_count << ".png";
-                cv::imwrite(ss.str(), cv_ptr->image);
-
-                std::cout << "Saved " << ss.str() << std::endl;
-                image_count++;
-            } catch (cv_bridge::Exception& e) {
-                std::cerr << "cv_bridge exception: " << e.what() << std::endl;
+            // Maintain sliding window of the last 50 points
+            if (shared_data_x.size() > 50) {
+                shared_data_x.erase(shared_data_x.begin());
+                shared_data_y.erase(shared_data_y.begin());
             }
         }
+
+        // Increment the time variable
+        t += 0.1;
+
+        ROS_INFO("Generated data: x = %.2f, y = %.2f", x, y);
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
+}
+
+// Function to handle matplotlibcpp visualization
+void matplotlibFunction() {
+    // Turn on interactive mode
+    plt::ion();
+
+    while (ros::ok()) {
+        // Local copy of shared data
+        std::vector<double> x, y;
+
+        // Lock the mutex and copy shared data
+        {
+            boost::mutex::scoped_lock lock(data_mutex);
+            x = shared_data_x;
+            y = shared_data_y;
+        }
+
+        // Clear the previous plot and plot updated data
+        plt::clf();
+        plt::plot(x, y, "b-");
+        plt::title("Live Data Visualization");
+        plt::grid(true);
+
+        // Display the plot and update
+        plt::pause(0.1); // Pause for 100 milliseconds
     }
 
-    bag.close();
-    std::cout << "Finished extracting images. Total images: " << image_count << std::endl;
+    // Turn off interactive mode
+    plt::show();
+}
+
+int main(int argc, char **argv) {
+    // Create threads for ROS and matplotlibcpp
+    boost::thread rosThread(rosNodeFunction);
+    boost::thread matplotlibThread(matplotlibFunction);
+
+    // Wait for both threads to finish
+    rosThread.join();
+    matplotlibThread.join();
 
     return 0;
 }
