@@ -29,9 +29,19 @@ find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 #find_package(OpenMP REQUIRED)
 #find_package(Ceres REQUIRED)
 
-#find_package(PCL REQUIRED)
-#include_directories(${PCL_INCLUDE_DIRS})
-#add_definitions(${PCL_DEFINITIONS})
+find_package(PCL REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
+find_package(assimp REQUIRED)
+if (assimp_FOUND)
+    set(assimp_INCLUDE_DIRS /usr/include/assimp)
+    set(assimp_LIBRARIES /usr/lib/x86_64-linux-gnu/libassimp.so)
+    message(STATUS "Assimp found at ${assimp_INCLUDE_DIRS}")
+    include_directories(${assimp_INCLUDE_DIRS})
+else ()
+    message(FATAL_ERROR "Assimp not found")
+endif ()
 
 find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets)
 set(CMAKE_AUTOMOC ON)
@@ -149,4 +159,5 @@ target_link_libraries(ros_test_node
         ${PCL_LIBRARIES}
         ${catkin_LIBRARIES}
         pthread
+        ${assimp_LIBRARIES}
 )
