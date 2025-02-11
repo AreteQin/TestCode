@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 #project(Test)
-project(Test LANGUAGES CXX CUDA)
+project(ros_test_node LANGUAGES CXX CUDA)
 
 #set(CMAKE_BUILD_TYPE "debug")
 #add_definitions("-DENABLE_SSE")
@@ -119,37 +119,6 @@ include_directories(${PROJECT_SOURCE_DIR}/third_party/matplotlib-cpp)
 # Find Python headers
 find_package(PythonLibs REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
-
-add_library(my_lib lib.cpp lib.h)
-add_executable(testing_codes test.cpp) # "name "test" is not valid in TX2
-#target_include_directories(test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${GLOG_INCLUDE_DIRS})
-target_link_libraries(testing_codes
-        Eigen3::Eigen
-        my_lib
-        matplotlib_cpp
-        ${realsense2_LIBRARY}
-        ${OpenCV_LIBS}
-        ${Pangolin_LIBRARIES}
-        ${GLOG_LIBRARIES}
-        ${PCL_LIBRARIES}
-        #        ${GLFW_LIBRARIES}
-        #        g2o_core
-        #        g2o_stuff
-        #        g2o_types_sba
-        #        g2o_solver_csparse
-        #        g2o_csparse_extension
-        #        Sophus::Sophus
-        #        ${CERES_LIBRARIES}
-        Qt5::Widgets
-        Qt5::Core
-        Qt5::Gui
-)
-
-add_executable(cuda_test cuda_test.cu cuda_test.cuh)
-target_include_directories(cuda_test PUBLIC
-        ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
-        ${GLOG_INCLUDE_DIRS}
-)
 
 add_executable(ros_test_node src/ros_test_node.cpp)
 target_link_libraries(ros_test_node
