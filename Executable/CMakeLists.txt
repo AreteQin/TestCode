@@ -75,23 +75,6 @@ find_package(CUDA REQUIRED)
 #endif (CUDA_FOUND)
 set(CUDA_ADD_CUBLAS_TO_TARGET ON)
 
-# ROS support
-find_package(catkin REQUIRED COMPONENTS
-        roscpp
-        std_msgs
-        image_transport
-        tf2
-        tf2_ros
-        tf
-        cv_bridge
-        message_filters
-        sensor_msgs
-        rosbag
-)
-include_directories(
-        ${catkin_INCLUDE_DIRS}
-)
-
 if (OPENMP_FOUND)
     message(STATUS "OpenMP found will try to link!")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -120,7 +103,7 @@ include_directories(${PROJECT_SOURCE_DIR}/third_party/matplotlib-cpp)
 find_package(PythonLibs REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 
-add_library(my_lib lib.cpp lib.h)
+#add_library(my_lib lib.cpp lib.h)
 add_executable(testing_codes test.cpp) # "name "test" is not valid in TX2
 #target_include_directories(test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${GLOG_INCLUDE_DIRS})
 target_link_libraries(testing_codes
@@ -149,15 +132,4 @@ add_executable(cuda_test cuda_test.cu cuda_test.cuh)
 target_include_directories(cuda_test PUBLIC
         ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
         ${GLOG_INCLUDE_DIRS}
-)
-
-add_executable(ros_test_node src/ros_test_node.cpp)
-target_link_libraries(ros_test_node
-        #        ${realsense2_LIBRARY}
-        ${OpenCV_LIBS}
-        ${GLOG_LIBRARIES}
-        ${PCL_LIBRARIES}
-        ${catkin_LIBRARIES}
-        pthread
-        ${assimp_LIBRARIES}
 )
