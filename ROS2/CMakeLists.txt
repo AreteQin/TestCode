@@ -42,6 +42,10 @@ install(TARGETS
         ros2_test
         DESTINATION lib/${PROJECT_NAME}
 )
+install(DIRECTORY
+        launch
+        DESTINATION share/${PROJECT_NAME}/
+)
 
 # Install the include directory (if you have header files)
 # install(DIRECTORY include/${PROJECT_NAME}
