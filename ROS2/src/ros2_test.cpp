@@ -1,121 +1,65 @@
-#include <chrono>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "rclcpp/rclcpp.hpp"
-#include "rclcpp_lifecycle/lifecycle_node.hpp"
-#include "lifecycle_msgs/msg/state.hpp"
-#include "lifecycle_msgs/msg/transition.hpp"
+#include "sensor_msgs/msg/image.hpp"
+#include "cv_bridge/cv_bridge.h"
+#include "opencv2/opencv.hpp"
+#include "image_transport/image_transport.hpp"
 
-using namespace std::chrono_literals;
-
-// A minimal lifecycle node that logs lifecycle state transitions.
-class MinimalLifecycleNode : public rclcpp_lifecycle::LifecycleNode
+class CameraStreamTest : public rclcpp::Node
 {
 public:
-  explicit MinimalLifecycleNode(const std::string & node_name)
-  : rclcpp_lifecycle::LifecycleNode(
-      node_name,               // The node name.
-      "",                      // Use the default namespace.
-      // Node options: enable intra-process communications and remap the internal node name.
-      rclcpp::NodeOptions()
-        .use_intra_process_comms(true)
-        .arguments({"--ros-args", "-r",
-                    node_name + ":" + std::string("__node:=") + node_name}))
-  {
-    RCLCPP_INFO(get_logger(), "Lifecycle node '%s' constructed", node_name.c_str());
-  }
+    CameraStreamTest() : Node("camera_stream_test")
+    {
+        // Initialize transport inside constructor without shared_from_this()
+        image_transport_ = std::make_unique<image_transport::ImageTransport>(
+            std::shared_ptr<rclcpp::Node>(this, [](auto*)
+            {
+            }));
 
-  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_configure(
-    const rclcpp_lifecycle::State &)
-  {
-    RCLCPP_INFO(get_logger(), "on_configure() called");
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
-  }
+        image_sub_ = image_transport_->subscribe(
+            "/wrapper/psdk_ros2/compressed_camera_stream",
+            5,
+            [this](const sensor_msgs::msg::Image::ConstSharedPtr& msg)
+            {
+                RCLCPP_INFO(get_logger(),
+                            "Received image: %dx%d, encoding: %s, frame_id: %s",
+                            msg->width, msg->height, msg->encoding.c_str(),
+                            msg->header.frame_id.c_str());
 
-  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_activate(
-    const rclcpp_lifecycle::State &)
-  {
-    RCLCPP_INFO(get_logger(), "on_activate() called");
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
-  }
+                // Convert ROS Image to OpenCV format
+                try
+                {
+                    cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 
-  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_deactivate(
-    const rclcpp_lifecycle::State &)
-  {
-    RCLCPP_INFO(get_logger(), "on_deactivate() called");
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
-  }
+                    // Display the image
+                    cv::imshow("Camera Stream", cv_ptr->image);
+                    cv::waitKey(1); // Process GUI events, wait 1ms
+                }
+                catch (cv_bridge::Exception& e)
+                {
+                    RCLCPP_ERROR(get_logger(), "cv_bridge exception: %s", e.what());
+                }
+            });
 
-  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_cleanup(
-    const rclcpp_lifecycle::State &)
-  {
-    RCLCPP_INFO(get_logger(), "on_cleanup() called");
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
-  }
+        RCLCPP_INFO(get_logger(), "Waiting for images...");
+    }
 
-  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_shutdown(
-    const rclcpp_lifecycle::State &)
-  {
-    RCLCPP_INFO(get_logger(), "on_shutdown() called");
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
-  }
+    ~CameraStreamTest()
+    {
+        // Close all OpenCV windows when node is destroyed
+        cv::destroyAllWindows();
+    }
+
+private:
+    std::unique_ptr<image_transport::ImageTransport> image_transport_;
+    image_transport::Subscriber image_sub_;
 };
 
-int main(int argc, char ** argv)
+int main(int argc, char** argv)
 {
-  rclcpp::init(argc, argv);
-
-  std::string node_name = "my_lifecycle_node";
-  auto lifecycle_node = std::make_shared<MinimalLifecycleNode>(node_name);
-
-  // Create an executor to run the node.
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(lifecycle_node->get_node_base_interface());
-
-  // Trigger the CONFIGURE transition and check the returned state.
-  RCLCPP_INFO(lifecycle_node->get_logger(), "Triggering CONFIGURE transition...");
-  auto state = lifecycle_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_CONFIGURE);
-  if (state.id() != lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE) {
-    RCLCPP_ERROR(lifecycle_node->get_logger(), "Failed to configure node, current state: %d", state.id());
-  } else {
-    RCLCPP_INFO(lifecycle_node->get_logger(), "Node configured successfully.");
-  }
-
-  // Trigger the ACTIVATE transition and check the returned state.
-  RCLCPP_INFO(lifecycle_node->get_logger(), "Triggering ACTIVATE transition...");
-  state = lifecycle_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_ACTIVATE);
-  if (state.id() != lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
-    RCLCPP_ERROR(lifecycle_node->get_logger(), "Failed to activate node, current state: %d", state.id());
-  } else {
-    RCLCPP_INFO(lifecycle_node->get_logger(), "Node activated successfully.");
-  }
-
-  // Let the node run for a few seconds.
-  RCLCPP_INFO(lifecycle_node->get_logger(), "Node is now active and running...");
-  for (int i = 0; i < 5; ++i) {
-    executor.spin_once(100ms);
-  }
-
-  // Trigger the DEACTIVATE transition.
-  RCLCPP_INFO(lifecycle_node->get_logger(), "Triggering DEACTIVATE transition...");
-  state = lifecycle_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_DEACTIVATE);
-  if (state.id() != lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE) {
-    RCLCPP_ERROR(lifecycle_node->get_logger(), "Failed to deactivate node, current state: %d", state.id());
-  } else {
-    RCLCPP_INFO(lifecycle_node->get_logger(), "Node deactivated successfully.");
-  }
-
-  // Trigger the CLEANUP transition.
-  RCLCPP_INFO(lifecycle_node->get_logger(), "Triggering CLEANUP transition...");
-  state = lifecycle_node->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_CLEANUP);
-  if (state.id() != lifecycle_msgs::msg::State::PRIMARY_STATE_UNCONFIGURED) {
-    RCLCPP_ERROR(lifecycle_node->get_logger(), "Failed to cleanup node, current state: %d", state.id());
-  } else {
-    RCLCPP_INFO(lifecycle_node->get_logger(), "Node cleaned up successfully.");
-  }
-
-  rclcpp::shutdown();
-  return 0;
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<CameraStreamTest>();
+    node->declare_parameter<std::string>("image_transport", "compressed");
+    rclcpp::spin(node);
+    rclcpp::shutdown();
+    return 0;
 }
