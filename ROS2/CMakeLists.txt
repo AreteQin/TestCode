@@ -9,6 +9,7 @@ find_package(lifecycle_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(compressed_image_transport REQUIRED)
+find_package(Glog REQUIRED)
 
 find_package(psdk_interfaces REQUIRED)  # For the service interface
 find_package(OpenCV 4 REQUIRED)
@@ -35,7 +36,9 @@ ament_target_dependencies(ros2_test
 ) # Add other dependencies as needed
 
 # Link OpenCV
-target_link_libraries(ros2_test ${OpenCV_LIBS})
+target_link_libraries(ros2_test
+        glog::glog
+        ${OpenCV_LIBS})
 
 # Install the executable (optional, but recommended)
 install(TARGETS

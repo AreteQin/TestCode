@@ -1,65 +1,131 @@
+// main_task.cpp
+#include <csignal>
+#include <chrono>
+#include <memory>
+#include <thread>
+
 #include "rclcpp/rclcpp.hpp"
-#include "sensor_msgs/msg/image.hpp"
-#include "cv_bridge/cv_bridge.h"
-#include "opencv2/opencv.hpp"
-#include "image_transport/image_transport.hpp"
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
 
-class CameraStreamTest : public rclcpp::Node
-{
+using namespace std::chrono_literals;
+using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
+
+// Define a Lifecycle Node that performs work via a timer and does cleanup in its deactivation callback.
+class MainTask : public rclcpp_lifecycle::LifecycleNode {
 public:
-    CameraStreamTest() : Node("camera_stream_test")
-    {
-        // Initialize transport inside constructor without shared_from_this()
-        image_transport_ = std::make_unique<image_transport::ImageTransport>(
-            std::shared_ptr<rclcpp::Node>(this, [](auto*)
-            {
-            }));
+  MainTask()
+  : LifecycleNode("main_task")
+  {
+    RCLCPP_INFO(get_logger(), "MainTask constructed");
+  }
 
-        image_sub_ = image_transport_->subscribe(
-            "/wrapper/psdk_ros2/compressed_camera_stream",
-            5,
-            [this](const sensor_msgs::msg::Image::ConstSharedPtr& msg)
-            {
-                RCLCPP_INFO(get_logger(),
-                            "Received image: %dx%d, encoding: %s, frame_id: %s",
-                            msg->width, msg->height, msg->encoding.c_str(),
-                            msg->header.frame_id.c_str());
+  // on_configure: create resources (e.g., timer)
+  CallbackReturn on_configure(const rclcpp_lifecycle::State & /*previous_state*/) override {
+    RCLCPP_INFO(get_logger(), "on_configure() called");
+    timer_ = this->create_wall_timer(
+      1s, std::bind(&MainTask::timer_callback, this));
+    return CallbackReturn::SUCCESS;
+  }
 
-                // Convert ROS Image to OpenCV format
-                try
-                {
-                    cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+  // on_activate: node becomes fully active.
+  CallbackReturn on_activate(const rclcpp_lifecycle::State & /*previous_state*/) override {
+    RCLCPP_INFO(get_logger(), "on_activate() called");
+    return CallbackReturn::SUCCESS;
+  }
 
-                    // Display the image
-                    cv::imshow("Camera Stream", cv_ptr->image);
-                    cv::waitKey(1); // Process GUI events, wait 1ms
-                }
-                catch (cv_bridge::Exception& e)
-                {
-                    RCLCPP_ERROR(get_logger(), "cv_bridge exception: %s", e.what());
-                }
-            });
-
-        RCLCPP_INFO(get_logger(), "Waiting for images...");
+  // on_deactivate: perform cleanup tasks (e.g., releasing control authority).
+  CallbackReturn on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/) override {
+    RCLCPP_INFO(get_logger(), "on_deactivate() called");
+    // Call cleanup function (simulate a service call)
+    callReleaseAuthority();
+    if (timer_) {
+      timer_->cancel();
     }
+    return CallbackReturn::SUCCESS;
+  }
 
-    ~CameraStreamTest()
-    {
-        // Close all OpenCV windows when node is destroyed
-        cv::destroyAllWindows();
-    }
+  // on_cleanup: destroy resources.
+  CallbackReturn on_cleanup(const rclcpp_lifecycle::State & /*previous_state*/) override {
+    RCLCPP_INFO(get_logger(), "on_cleanup() called");
+    timer_.reset();
+    return CallbackReturn::SUCCESS;
+  }
+
+  // on_shutdown: final callback on shutdown.
+  CallbackReturn on_shutdown(const rclcpp_lifecycle::State & /*previous_state*/) override {
+    RCLCPP_INFO(get_logger(), "on_shutdown() called");
+    return CallbackReturn::SUCCESS;
+  }
+
+  // Timer callback (dummy work)
+  void timer_callback() {
+    RCLCPP_INFO(get_logger(), "Timer callback executing...");
+  }
+
+  // Simulated cleanup work that might include a synchronous service call.
+  void callReleaseAuthority() {
+    RCLCPP_INFO(get_logger(), "Executing callReleaseAuthority() cleanup work...");
+    // Simulate a delay as if waiting for a service response.
+    std::this_thread::sleep_for(2s);
+    RCLCPP_INFO(get_logger(), "Cleanup work complete: control authority released.");
+  }
 
 private:
-    std::unique_ptr<image_transport::ImageTransport> image_transport_;
-    image_transport::Subscriber image_sub_;
+  rclcpp::TimerBase::SharedPtr timer_;
 };
 
-int main(int argc, char** argv)
+// Global pointers to node and executor for the custom signal handler.
+std::shared_ptr<MainTask> g_node;
+std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> g_executor;
+
+// Custom signal handler that triggers proper lifecycle transitions before shutdown.
+void customSignalHandler(int signum)
 {
-    rclcpp::init(argc, argv);
-    auto node = std::make_shared<CameraStreamTest>();
-    node->declare_parameter<std::string>("image_transport", "compressed");
-    rclcpp::spin(node);
-    rclcpp::shutdown();
-    return 0;
+  RCLCPP_INFO(g_node->get_logger(), "Custom signal handler invoked: signal %d", signum);
+
+  // Trigger deactivation (cleanup work will run inside on_deactivate)
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn ret;
+  g_node->deactivate(ret);
+  RCLCPP_INFO(g_node->get_logger(), "Deactivation complete.");
+
+  // Optionally, trigger the shutdown transition.
+  g_node->shutdown(ret);
+  RCLCPP_INFO(g_node->get_logger(), "Shutdown transition complete.");
+
+  // Finally, call rclcpp::shutdown() so the executor stops spinning.
+  rclcpp::shutdown();
+}
+
+int main(int argc, char ** argv)
+{
+  // Disable automatic shutdown on signal by setting the member variable.
+  rclcpp::InitOptions init_options;
+  init_options.shutdown_on_signal = false;
+  rclcpp::init(argc, argv, init_options);
+
+  // Create the lifecycle node.
+  g_node = std::make_shared<MainTask>();
+
+  // Create a multi-threaded executor and add the node.
+  g_executor = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
+  g_executor->add_node(g_node->get_node_base_interface());
+
+  // Register our custom signal handler for SIGINT (Ctrl+C).
+  std::signal(SIGINT, customSignalHandler);
+
+  // Trigger lifecycle transitions:
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn ret;
+  g_node->configure(ret);
+  g_node->activate(ret);
+
+  // Spin the executor until shutdown is triggered.
+  g_executor->spin();
+
+  // Cleanup after shutdown.
+  g_executor->remove_node(g_node->get_node_base_interface());
+  g_node.reset();
+  g_executor.reset();
+
+  return 0;
 }

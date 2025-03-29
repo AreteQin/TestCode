@@ -97,7 +97,7 @@ include_directories(
 )
 
 # enable drawing plot
-add_subdirectory(third_party/matplotlib-cpp)
+add_subdirectory(ThirdParty/matplotlib-cpp)
 include_directories(${PROJECT_SOURCE_DIR}/third_party/matplotlib-cpp)
 # Find Python headers
 find_package(PythonLibs REQUIRED)
@@ -131,5 +131,4 @@ target_link_libraries(testing_codes
 add_executable(cuda_test cuda_test.cu cuda_test.cuh)
 target_include_directories(cuda_test PUBLIC
         ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
-        ${GLOG_INCLUDE_DIRS}
 )
