@@ -11,12 +11,10 @@ find_package(image_transport REQUIRED)
 find_package(compressed_image_transport REQUIRED)
 find_package(Glog REQUIRED)
 
-find_package(psdk_interfaces REQUIRED)  # For the service interface
 find_package(OpenCV 4 REQUIRED)
 
 include_directories(
         ${OpenCV_INCLUDE_DIRS}
-        ${psdk_interfaces_INCLUDE_DIRS}
 )
 
 # Add executable
@@ -30,7 +28,6 @@ ament_target_dependencies(ros2_test
         "lifecycle_msgs"
         cv_bridge
         sensor_msgs
-        psdk_interfaces
         image_transport
         compressed_image_transport
 ) # Add other dependencies as needed
