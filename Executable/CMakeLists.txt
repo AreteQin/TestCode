@@ -29,9 +29,9 @@ find_package(Boost COMPONENTS system filesystem serialization REQUIRED)
 #find_package(OpenMP REQUIRED)
 #find_package(Ceres REQUIRED)
 
-find_package(PCL REQUIRED)
-include_directories(${PCL_INCLUDE_DIRS})
-add_definitions(${PCL_DEFINITIONS})
+#find_package(PCL REQUIRED)
+#include_directories(${PCL_INCLUDE_DIRS})
+#add_definitions(${PCL_DEFINITIONS})
 
 find_package(assimp REQUIRED)
 if (assimp_FOUND)
@@ -108,7 +108,6 @@ add_executable(testing_codes test.cpp) # "name "test" is not valid in TX2
 #target_include_directories(test PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${GLOG_INCLUDE_DIRS})
 target_link_libraries(testing_codes
         Eigen3::Eigen
-        my_lib
         matplotlib_cpp
         ${realsense2_LIBRARY}
         ${OpenCV_LIBS}
