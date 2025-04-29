@@ -1,131 +1,131 @@
-// main_task.cpp
-#include <csignal>
-#include <chrono>
+// src/image_bag_to_folder.cpp
+
+#include <fstream>
 #include <memory>
-#include <thread>
+#include <string>
+#include <filesystem>
 
 #include "rclcpp/rclcpp.hpp"
-#include "rclcpp_lifecycle/lifecycle_node.hpp"
-#include "lifecycle_msgs/msg/state.hpp"
+#include "rclcpp/serialization.hpp"
+#include "rosbag2_transport/reader_writer_factory.hpp"
+#include "rosbag2_storage/storage_options.hpp"
+#include "rosbag2_cpp/reader.hpp"
 
-using namespace std::chrono_literals;
-using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
+#include "sensor_msgs/msg/image.hpp"
+#include "cv_bridge/cv_bridge.h"
+#include <opencv2/opencv.hpp>
 
-// Define a Lifecycle Node that performs work via a timer and does cleanup in its deactivation callback.
-class MainTask : public rclcpp_lifecycle::LifecycleNode {
+namespace fs = std::filesystem;
+
+class ImageBagToFolder : public rclcpp::Node
+{
 public:
-  MainTask()
-  : LifecycleNode("main_task")
+  ImageBagToFolder(
+    const std::string & bag_path,
+    const std::string & topic_name,
+    const std::string & out_folder)
+  : Node("image_bag_to_folder")
   {
-    RCLCPP_INFO(get_logger(), "MainTask constructed");
-  }
+    // Create output directory (and parent dirs) if needed
+    fs::create_directories(out_folder);
 
-  // on_configure: create resources (e.g., timer)
-  CallbackReturn on_configure(const rclcpp_lifecycle::State & /*previous_state*/) override {
-    RCLCPP_INFO(get_logger(), "on_configure() called");
-    timer_ = this->create_wall_timer(
-      1s, std::bind(&MainTask::timer_callback, this));
-    return CallbackReturn::SUCCESS;
-  }
-
-  // on_activate: node becomes fully active.
-  CallbackReturn on_activate(const rclcpp_lifecycle::State & /*previous_state*/) override {
-    RCLCPP_INFO(get_logger(), "on_activate() called");
-    return CallbackReturn::SUCCESS;
-  }
-
-  // on_deactivate: perform cleanup tasks (e.g., releasing control authority).
-  CallbackReturn on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/) override {
-    RCLCPP_INFO(get_logger(), "on_deactivate() called");
-    // Call cleanup function (simulate a service call)
-    callReleaseAuthority();
-    if (timer_) {
-      timer_->cancel();
+    // Open timestamps file
+    std::string ts_file = (fs::path(out_folder) / "timestamps.txt").string();
+    ts_stream_.open(ts_file, std::ios::out);
+    if (!ts_stream_.is_open()) {
+      throw std::runtime_error("Could not open " + ts_file);
     }
-    return CallbackReturn::SUCCESS;
+    ts_stream_ << "#timestamp [ns],filename\n";
+
+    // Initialize rosbag2 reader
+    rosbag2_storage::StorageOptions storage_options;
+    storage_options.uri = bag_path;
+
+    reader_ = rosbag2_transport::ReaderWriterFactory::make_reader(storage_options);
+    reader_->open(storage_options);
+
+    topic_name_ = topic_name;
+    out_folder_ = out_folder;
   }
 
-  // on_cleanup: destroy resources.
-  CallbackReturn on_cleanup(const rclcpp_lifecycle::State & /*previous_state*/) override {
-    RCLCPP_INFO(get_logger(), "on_cleanup() called");
-    timer_.reset();
-    return CallbackReturn::SUCCESS;
-  }
+  void run()
+  {
+    rclcpp::Serialization<sensor_msgs::msg::Image> serializer;
+    size_t frame_idx = 0u;
 
-  // on_shutdown: final callback on shutdown.
-  CallbackReturn on_shutdown(const rclcpp_lifecycle::State & /*previous_state*/) override {
-    RCLCPP_INFO(get_logger(), "on_shutdown() called");
-    return CallbackReturn::SUCCESS;
-  }
+    while (reader_->has_next()) {
+      auto bag_msg = reader_->read_next();
+      if (bag_msg->topic_name != topic_name_) {
+        continue;
+      }
 
-  // Timer callback (dummy work)
-  void timer_callback() {
-    RCLCPP_INFO(get_logger(), "Timer callback executing...");
-  }
+      // Deserialize ROS2 Image
+      rclcpp::SerializedMessage serialized(*bag_msg->serialized_data);
+      auto img_msg = std::make_shared<sensor_msgs::msg::Image>();
+      serializer.deserialize_message(&serialized, img_msg.get());
 
-  // Simulated cleanup work that might include a synchronous service call.
-  void callReleaseAuthority() {
-    RCLCPP_INFO(get_logger(), "Executing callReleaseAuthority() cleanup work...");
-    // Simulate a delay as if waiting for a service response.
-    std::this_thread::sleep_for(2s);
-    RCLCPP_INFO(get_logger(), "Cleanup work complete: control authority released.");
+      // Convert to OpenCV
+      cv_bridge::CvImagePtr cv_ptr;
+      try {
+        cv_ptr = cv_bridge::toCvCopy(img_msg, img_msg->encoding);
+      } catch (const cv_bridge::Exception & e) {
+        RCLCPP_ERROR(get_logger(), "cv_bridge exception: %s", e.what());
+        continue;
+      }
+
+      // Timestamp in ns
+      uint64_t ts_ns =
+        static_cast<uint64_t>(img_msg->header.stamp.sec) * 1000000000ull +
+        img_msg->header.stamp.nanosec;
+
+      // Build filename
+      char buf[64];
+      std::snprintf(buf, sizeof(buf), "frame_%06zu.png", frame_idx);
+      std::string filename = buf;
+      std::string fullpath = (fs::path(out_folder_) / filename).string();
+
+      // Save image
+      if (!cv::imwrite(fullpath, cv_ptr->image)) {
+        RCLCPP_WARN(get_logger(), "Failed to write %s", fullpath.c_str());
+        continue;
+      }
+
+      // Log timestamp
+      ts_stream_ << ts_ns << "," << filename << "\n";
+
+      ++frame_idx;
+    }
+
+    ts_stream_.close();
+    RCLCPP_INFO(get_logger(), "Done: wrote %zu images to %s", frame_idx, out_folder_.c_str());
   }
 
 private:
-  rclcpp::TimerBase::SharedPtr timer_;
+  std::unique_ptr<rosbag2_cpp::Reader> reader_;
+  std::string topic_name_, out_folder_;
+  std::ofstream ts_stream_;
 };
-
-// Global pointers to node and executor for the custom signal handler.
-std::shared_ptr<MainTask> g_node;
-std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> g_executor;
-
-// Custom signal handler that triggers proper lifecycle transitions before shutdown.
-void customSignalHandler(int signum)
-{
-  RCLCPP_INFO(g_node->get_logger(), "Custom signal handler invoked: signal %d", signum);
-
-  // Trigger deactivation (cleanup work will run inside on_deactivate)
-  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn ret;
-  g_node->deactivate(ret);
-  RCLCPP_INFO(g_node->get_logger(), "Deactivation complete.");
-
-  // Optionally, trigger the shutdown transition.
-  g_node->shutdown(ret);
-  RCLCPP_INFO(g_node->get_logger(), "Shutdown transition complete.");
-
-  // Finally, call rclcpp::shutdown() so the executor stops spinning.
-  rclcpp::shutdown();
-}
 
 int main(int argc, char ** argv)
 {
-  // Disable automatic shutdown on signal by setting the member variable.
-  rclcpp::InitOptions init_options;
-  init_options.shutdown_on_signal = false;
-  rclcpp::init(argc, argv, init_options);
+  if (argc < 4) {
+    std::cerr << "Usage: " << argv[0]
+              << " <bag_path> <image_topic> <output_folder>\n";
+    return 1;
+  }
+  rclcpp::init(argc, argv);
 
-  // Create the lifecycle node.
-  g_node = std::make_shared<MainTask>();
+  try {
+    auto node = std::make_shared<ImageBagToFolder>(
+      argv[1],  // path to bag (folder)
+      argv[2],  // e.g. "/camera/image_raw"
+      argv[3]); // e.g. "out_images"
+    node->run();
+  } catch (const std::exception & ex) {
+    std::cerr << "Error: " << ex.what() << "\n";
+    return 1;
+  }
 
-  // Create a multi-threaded executor and add the node.
-  g_executor = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
-  g_executor->add_node(g_node->get_node_base_interface());
-
-  // Register our custom signal handler for SIGINT (Ctrl+C).
-  std::signal(SIGINT, customSignalHandler);
-
-  // Trigger lifecycle transitions:
-  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn ret;
-  g_node->configure(ret);
-  g_node->activate(ret);
-
-  // Spin the executor until shutdown is triggered.
-  g_executor->spin();
-
-  // Cleanup after shutdown.
-  g_executor->remove_node(g_node->get_node_base_interface());
-  g_node.reset();
-  g_executor.reset();
-
+  rclcpp::shutdown();
   return 0;
 }

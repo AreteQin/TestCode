@@ -9,6 +9,8 @@ find_package(lifecycle_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(compressed_image_transport REQUIRED)
+find_package(rosbag2_transport REQUIRED)
+find_package(rosbag2_cpp REQUIRED)
 find_package(Glog REQUIRED)
 
 find_package(OpenCV 4 REQUIRED)
@@ -29,6 +31,8 @@ ament_target_dependencies(ros2_test
         cv_bridge
         sensor_msgs
         image_transport
+        rosbag2_transport
+        rosbag2_cpp
         compressed_image_transport
 ) # Add other dependencies as needed
 
