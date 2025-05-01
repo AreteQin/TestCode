@@ -11,8 +11,9 @@ find_package(image_transport REQUIRED)
 find_package(compressed_image_transport REQUIRED)
 find_package(rosbag2_transport REQUIRED)
 find_package(rosbag2_cpp REQUIRED)
-find_package(Glog REQUIRED)
+find_package(vision_msgs REQUIRED)
 
+find_package(Glog REQUIRED)
 find_package(OpenCV 4 REQUIRED)
 
 include_directories(
@@ -34,6 +35,7 @@ ament_target_dependencies(ros2_test
         rosbag2_transport
         rosbag2_cpp
         compressed_image_transport
+        vision_msgs
 ) # Add other dependencies as needed
 
 # Link OpenCV
