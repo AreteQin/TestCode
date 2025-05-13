@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
-#project(Test)
-project(ros_test_node LANGUAGES CXX CUDA)
+project(ros_test_node)
+#project(ros_test_node LANGUAGES CXX CUDA)
 
 #set(CMAKE_BUILD_TYPE "debug")
 #add_definitions("-DENABLE_SSE")
@@ -46,7 +46,8 @@ endif ()
 find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets)
 set(CMAKE_AUTOMOC ON)
 
-find_package(CUDA REQUIRED)
+#find_package(CUDA REQUIRED)
+#set(CUDA_ADD_CUBLAS_TO_TARGET ON)
 #if (CUDA_FOUND)
 #    message("-- Found CUDA version ${CUDA_VERSION} installed in: "
 #            "${CUDA_TOOLKIT_ROOT_DIR} via legacy (< 3.17) CMake module. "
@@ -73,7 +74,6 @@ find_package(CUDA REQUIRED)
 #    message("-- Did not find CUDA, disabling CUDA support.")
 #    update_cache_variable(USE_CUDA OFF)
 #endif (CUDA_FOUND)
-set(CUDA_ADD_CUBLAS_TO_TARGET ON)
 
 # ROS support
 find_package(catkin REQUIRED COMPONENTS
@@ -87,6 +87,12 @@ find_package(catkin REQUIRED COMPONENTS
         message_filters
         sensor_msgs
         rosbag
+)
+catkin_package(
+        #  INCLUDE_DIRS include  (if you have header files to export)
+        #  LIBRARIES my_lib      (if you built a library in this package)
+        #  CATKIN_DEPENDS roscpp std_msgs ... (your package dependencies, optional for executables)
+        #  DEPENDS system_libs   (e.g. PCL, OpenCV, if you want to export those to downstream)
 )
 include_directories(
         ${catkin_INCLUDE_DIRS}
@@ -114,8 +120,8 @@ include_directories(
 )
 
 # enable drawing plot
-add_subdirectory(third_party/matplotlib-cpp)
-include_directories(${PROJECT_SOURCE_DIR}/third_party/matplotlib-cpp)
+add_subdirectory(ThirdParty/matplotlib-cpp)
+include_directories(${PROJECT_SOURCE_DIR}/ThirdParty/matplotlib-cpp)
 # Find Python headers
 find_package(PythonLibs REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
@@ -130,3 +136,4 @@ target_link_libraries(ros_test_node
         pthread
         ${assimp_LIBRARIES}
 )
+
