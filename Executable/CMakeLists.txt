@@ -12,14 +12,14 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules) # Add element
 #set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 
 find_package(OpenCV 4 REQUIRED)
-#find_package(Sophus REQUIRED)
+find_package(Sophus REQUIRED)
 #find_package(Pangolin REQUIRED) # used to show pointcloud
 #find_package(CSparse REQUIRED)
 
-#find_package(G2O REQUIRED)
-#if (G2O_FOUND)
-#    message(STATUS "G2O found. Version: ${G2O_VERSION}")
-#endif (G2O_FOUND)
+find_package(G2O REQUIRED)
+if (G2O_FOUND)
+    message(STATUS "G2O found. Version: ${G2O_VERSION}")
+endif (G2O_FOUND)
 
 find_package(Eigen3 REQUIRED)
 find_package(Glog REQUIRED)
@@ -114,14 +114,13 @@ target_link_libraries(testing_codes
         ${Pangolin_LIBRARIES}
         ${GLOG_LIBRARIES}
         ${PCL_LIBRARIES}
-        #        ${GLFW_LIBRARIES}
-        #        g2o_core
-        #        g2o_stuff
-        #        g2o_types_sba
-        #        g2o_solver_csparse
-        #        g2o_csparse_extension
-        #        Sophus::Sophus
-        #        ${CERES_LIBRARIES}
+        g2o_core
+        g2o_stuff
+        g2o_types_sba
+        g2o_solver_csparse
+        g2o_csparse_extension
+        g2o_types_sim3
+        Sophus::Sophus
         Qt5::Widgets
         Qt5::Core
         Qt5::Gui

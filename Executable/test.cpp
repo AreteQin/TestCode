@@ -1,64 +1,136 @@
-// Implementation 1
+// Estimate similarity (scale, rotation, translation) between two sets of 3D points
+// using G2O and least-squares optimization.
+
 #include <iostream>
-#include <cmath>
-#include <cstdlib>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <memory>
 
-const double PI = 3.14159265358979323846;
-const double R = 6371.0; // Earth's radius in kilometers
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
-int main()
+// G2O headers
+#include <g2o/core/sparse_optimizer.h>
+#include <g2o/core/block_solver.h>
+#include <g2o/core/optimization_algorithm_levenberg.h>
+#include <g2o/solvers/dense/linear_solver_dense.h>
+#include <g2o/types/sim3/types_seven_dof_expmap.h>
+#include <g2o/core/base_unary_edge.h>
+
+using namespace g2o;
+
+// Helper: read "x,y,z" CSV into vector of Eigen::Vector3d
+static bool readCSV3D(const std::string& filename, std::vector<Eigen::Vector3d>& out)
 {
-    // Input GPS coordinates in degrees:
-    // Point A: current position (φ₁, λ₁)
-    // Point B: destination (φ₂, λ₂)
-    double phi1_deg = 45; // φ₁: current latitude in degrees
-    double lambda1_deg = -73; // λ₁: current longitude in degrees
-    double phi2_deg = 45; // φ₂: destination latitude in degrees
-    double lambda2_deg = -72; // λ₂: destination longitude in degrees
-
-    // Convert degrees to radians.
-    double phi1 = phi1_deg * PI / 180.0;
-    double lambda1 = lambda1_deg * PI / 180.0;
-    double phi2 = phi2_deg * PI / 180.0;
-    double lambda2 = lambda2_deg * PI / 180.0;
-
-    // --- Step 1: Calculate the sides of the spherical triangle NAB ---
-    // Let N be the north pole.
-    // a = (π/2 - φ₂), b = (π/2 - φ₁), and C = λ₁ - λ₂ (angle at the north pole)
-    double a = (PI / 2.0) - phi2; // side from North Pole to point B
-    double b = (PI / 2.0) - phi1; // side from North Pole to point A
-    double C = lambda2 - lambda1; // angle at the north pole
-
-    // --- Step 2: Calculate the bearing A using the derived formula ---
-    // According to the derivation:
-    // tan A = (sin a * sin b * sin(λ₁ - λ₂)) / (cos a - cos b * (cos a * cos b + sin a * sin b * cos C))
-    double numerator = sin(a) * sin(b) * sin(C);
-    double denominator = cos(a) - cos(b) * (cos(a) * cos(b) + sin(a) * sin(b) * cos(C));
-
-    // Check for division by zero.
-    if (fabs(denominator) < 1e-10)
+    std::ifstream in(filename);
+    if (!in)
     {
-        std::cerr << "Error: Denominator too small, bearing cannot be computed reliably." << std::endl;
-        std::exit(EXIT_FAILURE);
+        std::cerr << "Failed to open " << filename << std::endl;
+        return false;
     }
-    double A_rad = atan2(numerator, denominator);
+    std::string line;
+    std::getline(in, line); // skip header
+    while (std::getline(in, line))
+    {
+        std::stringstream ss(line);
+        double x, y, z;
+        char comma;
+        ss >> x >> comma >> y >> comma >> z;
+        out.emplace_back(x, y, z);
+    }
+    return true;
+}
 
-    // Optionally, convert the bearing to degrees.
-    double A_deg = A_rad * 180.0 / PI;
+// Custom unary edge: transforms a point via Sim3 and compares to measurement
+class EdgeSim3Point : public BaseUnaryEdge<3, Eigen::Vector3d, VertexSim3Expmap>
+{
+public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
-    std::cout << "Bearing (radians): " << A_rad << std::endl;
-    std::cout << "Bearing (degrees): " << A_deg << std::endl;
+    EdgeSim3Point(const Eigen::Vector3d& pA) : pA_(pA)
+    {
+    }
 
-    // --- Step 3: Compute the great-circle distance between A and B ---
-    // Using the spherical law of cosines:
-    // cos c = sin φ1 sin φ2 + cos φ1 cos φ2 cos(λ1 - λ2)
-    double cos_c = sin(phi1) * sin(phi2) + cos(phi1) * cos(phi2) * cos(C);
-    // Clamp cos_c to the range [-1, 1] to avoid numerical errors.
-    if (cos_c > 1.0) cos_c = 1.0;
-    if (cos_c < -1.0) cos_c = -1.0;
-    double central_angle = acos(cos_c); // c, the central angle between A and B (in radians)
-    double distance = R * central_angle; // distance along the surface of the sphere
-    std::cout << "Distance (km): " << distance << std::endl;
+    void computeError() override
+    {
+        const VertexSim3Expmap* v = static_cast<const VertexSim3Expmap*>(_vertices[0]);
+        Eigen::Vector3d p_est = v->estimate().map(pA_);
+        _error = p_est - _measurement;
+    }
+
+    void linearizeOplus() override
+    {
+    }
+
+    bool read(std::istream&) override { return false; }
+    bool write(std::ostream&) const override { return false; }
+
+private:
+    Eigen::Vector3d pA_;
+};
+
+int main(int argc, char** argv)
+{
+    // 1) Load corresponding points
+    std::vector<Eigen::Vector3d> ptsA, ptsB;
+    if (!readCSV3D("points_frame_a.csv", ptsA) || !readCSV3D("points_frame_b.csv", ptsB))
+    {
+        return 1;
+    }
+    if (ptsA.size() != ptsB.size() || ptsA.empty())
+    {
+        std::cerr << "Point sets must have same non-zero size." << std::endl;
+        return 1;
+    }
+
+    // 2) Set up optimizer
+    g2o::SparseOptimizer optimizer;
+    optimizer.setVerbose(false);
+
+    // shorthand for the 7‐by‐3 block solver
+    using BlockSolver_7_3 = g2o::BlockSolver<g2o::BlockSolverTraits<7, 3>>;
+    using LinearSolverType = g2o::LinearSolverDense<BlockSolver_7_3::PoseMatrixType>;
+
+    // create a *real* linear solver, not a null unique_ptr
+    auto linearSolver = std::make_unique<LinearSolverType>();
+
+    // wrap it in the block‐solver
+    auto blockSolver = std::make_unique<BlockSolver_7_3>(std::move(linearSolver));
+
+    // give that to Levenberg
+    auto algorithm = new g2o::OptimizationAlgorithmLevenberg(std::move(blockSolver));
+    optimizer.setAlgorithm(algorithm);
+
+    // 3) Add Sim3 vertex
+    VertexSim3Expmap* vSim3 = new VertexSim3Expmap();
+    vSim3->setId(0);
+    Sim3 initialSim3(Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero(), 1.0);
+    vSim3->setEstimate(initialSim3);
+    vSim3->setFixed(false);
+    optimizer.addVertex(vSim3);
+
+    // 4) Add edges
+    for (size_t i = 0; i < ptsA.size(); ++i)
+    {
+        auto* rawEdge = new EdgeSim3Point(ptsA[i]);
+        rawEdge->setVertex(0, vSim3);
+        rawEdge->setMeasurement(ptsB[i]);
+        rawEdge->setInformation(Eigen::Matrix3d::Identity());
+        rawEdge->setId(static_cast<int>(i + 1)); // start IDs from 1 for edges
+        optimizer.addEdge(rawEdge);
+    }
+
+    // 5) Optimize
+    optimizer.initializeOptimization();
+    optimizer.optimize(20);
+
+    // 6) Retrieve results
+    Sim3 result = vSim3->estimate();
+    std::cout << "Estimated scale: " << result.scale() << std::endl;
+    std::cout << "Estimated rotation matrix:\n" << result.rotation().toRotationMatrix() << std::endl;
+    std::cout << "Estimated translation: " << result.translation().transpose() << std::endl;
 
     return 0;
 }
